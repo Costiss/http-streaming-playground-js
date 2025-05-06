@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "@types/node": "^22.15.8",
-    "eventsource": "^3.0.6",
-    "fastify": "^5.3.2"
+    "eventsource": "^3.0.6"
   }
 }
+

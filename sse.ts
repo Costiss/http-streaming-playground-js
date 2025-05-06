@@ -1,7 +1,7 @@
 import { EventSource } from "eventsource";
 
 for (let i = 0; i < 10; i++) {
-  const eventSource = new EventSource("http://localhost:3000/events");
+  const eventSource = new EventSource("http://localhost:3000/sse");
 
   eventSource.onmessage = (event) => {
     console.log("Client ", i, "New message from server", event.data);
@@ -12,4 +12,4 @@ for (let i = 0; i < 10; i++) {
     eventSource.close();
   };
 }
-console.log("SSE clients connected to /events endpoint.");
+console.log("SSE clients connected to endpoint.");

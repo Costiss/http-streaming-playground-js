@@ -1,46 +1,73 @@
-import fastify, { FastifyReply } from "fastify";
+import { createServer, IncomingMessage, ServerResponse } from "http";
+import { hrtime } from "process";
 import { Readable } from "stream";
 
-const app = fastify();
+const clients: Array<{ id: string; response: any }> = [];
 
-app.get("/stream", async (request, reply) => {
-  // Set headers for streaming
-  reply.header("Content-Type", "text/event-stream");
-  reply.header("Cache-Control", "no-cache");
-  reply.header("Connection", "keep-alive");
+const server = createServer((req, res) => {
+  const url = new URL(req.url || "", `http://${req.headers.host}`);
+  const pathname = url.pathname;
 
-  const id = (request.query as { id: string }).id ?? "1";
+  console.log("request received: ", pathname);
+  if (pathname === "/stream") {
+    handle_stream(req, res);
+  } else if (req.url === "/sse") {
+    handle_sse(req, res);
+  } else {
+    res.writeHead(404, { "Content-Type": "text/plain" });
+    res.end("Not Found");
+  }
+});
+
+server.listen(3000, () => {
+  console.log("Server listening at http://localhost:3000");
+});
+
+function handle_stream(
+  req: IncomingMessage,
+  res: ServerResponse<IncomingMessage>,
+) {
+  const urlParams = new URLSearchParams(req.url?.split("?")[1]);
+  const id = urlParams.get("id") ?? "1";
+
   console.log("stream requested with id:", id);
+
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
 
   const stream = new Readable({
     read() {
       setInterval(() => {
         this.push(`${id}`);
-      }, 1000); // Push data every second
+      }, 1000);
     },
   });
 
-  request.raw.on("close", () => {
+  req.on("close", () => {
     console.log("client disconnected ", id);
     stream.destroy();
-    reply.raw.end();
+    res.end();
   });
 
-  return reply.send(stream);
-});
+  stream.pipe(res);
+}
 
-let clients: Array<{ id: string; reply: FastifyReply }> = [];
-app.get("/sse", async (request, reply) => {
-  const headers = {
+function handle_sse(
+  req: IncomingMessage,
+  res: ServerResponse<IncomingMessage>,
+) {
+  res.writeHead(200, {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",
     Connection: "keep-alive",
-  };
-  reply.raw.writeHead(200, headers);
+  });
 
   const client = {
-    id: request.id,
-    reply,
+    id: `${hrtime.bigint()}`,
+    response: res,
   };
 
   clients.push(client);
@@ -48,21 +75,13 @@ app.get("/sse", async (request, reply) => {
   const interval = setInterval(() => {
     for (const client of clients) {
       const data = `data: ${client.id}\n\n`;
-      client.reply.raw.write(data);
+      client.response.write(data);
     }
   }, 1000);
 
-  request.raw.on("close", () => {
+  req.on("close", () => {
     clearInterval(interval);
-    clients = clients.filter((c) => c !== client);
-    reply.raw.end();
+    clients.splice(clients.indexOf(client), 1);
+    res.end();
   });
-});
-
-app.listen({ port: 3000 }, (err, address) => {
-  if (err) {
-    console.error(err);
-    process.exit(1);
-  }
-  console.log(`Server listening at ${address}`);
-});
+}
