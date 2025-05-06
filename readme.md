@@ -10,10 +10,6 @@ This project serves as a playground for experimenting with **Server-Sent Events 
 
 ## Getting Started
 
-### Prerequisites
-
-Ensure you have [Bun](https://bun.sh/) installed on your system.
-
 ### Running the Examples
 
 1. **Start the Server:**
@@ -40,11 +36,3 @@ The project includes various modules and dependencies for HTTP streaming and SSE
 - `server.ts`: Contains the server implementation for streaming.
 - `client.ts`: A client-side script to consume streamed data.
 - `sse.ts`: Demonstrates Server-Sent Events.
-
-## License
-
-This project is licensed under the MIT License. See the `LICENSE` file for details.
-
-## Contributing
-
-Feel free to fork this repository and submit pull requests to improve the examples or add new features.
