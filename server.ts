@@ -2,7 +2,8 @@ import { createServer, IncomingMessage, ServerResponse } from "http";
 import { hrtime } from "process";
 import { Readable } from "stream";
 
-const clients: Array<{ id: string; response: any }> = [];
+const clients: Map<string, { response: ServerResponse<IncomingMessage> }> =
+  new Map();
 
 const server = createServer((req, res) => {
   const url = new URL(req.url || "", `http://${req.headers.host}`);
@@ -65,23 +66,22 @@ function handle_sse(
     Connection: "keep-alive",
   });
 
-  const client = {
-    id: `${hrtime.bigint()}`,
-    response: res,
-  };
+  const id = hrtime.bigint().toString();
+  const client = { response: res };
 
-  clients.push(client);
+  clients.set(id.toString(), client);
 
   const interval = setInterval(() => {
-    for (const client of clients) {
-      const data = `data: ${client.id}\n\n`;
+    for (const [id, client] of clients.entries()) {
+      const data = `data: ${id}\n\n`;
       client.response.write(data);
     }
   }, 1000);
 
   req.on("close", () => {
     clearInterval(interval);
-    clients.splice(clients.indexOf(client), 1);
+    clients.delete(id);
+    console.log("client disconnected");
     res.end();
   });
 }
